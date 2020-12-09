@@ -1,28 +1,28 @@
-// #include <videosourcefactory.h>
-// #include <videotargetfactory.h>
-// #include <except.h>
-// #include <iobservable.h>
+#include <videosourcefactory.h>
+#include <videotargetfactory.h>
 #include <except.h>
 #include <videoframe.h>
 #include <device.h>
 #include <codec.h>
-// #ifdef USE_OPENCV
-// #include <opencv_video_source.h>
-// #include <opencv_video_target.h>
-// #endif
-// #ifdef USE_EPIPHANSDK
-// #include "epiphansdk_video_source.h"
-// #endif
-// #ifdef USE_LIBVLC
-// #include "vlc_video_source.h"
-// #endif
-// #ifdef USE_BLACKMAGICSDK
-// #include "blackmagicsdk_video_source.h"
-// #endif
-// #ifdef USE_FFMPEG
-// #include "ffmpeg_video_source.h"
-// #include "ffmpeg_video_target.h"
-// #endif
+#include <iobservable.h>
+#include <iobserver.h>
+#ifdef USE_OPENCV
+#include <opencv_video_source.h>
+#include <opencv_video_target.h>
+#endif
+#ifdef USE_EPIPHANSDK
+#include "epiphansdk_video_source.h"
+#endif
+#ifdef USE_LIBVLC
+#include "vlc_video_source.h"
+#endif
+#ifdef USE_BLACKMAGICSDK
+#include "blackmagicsdk_video_source.h"
+#endif
+#ifdef USE_FFMPEG
+#include "ffmpeg_video_source.h"
+#include "ffmpeg_video_target.h"
+#endif
 #include <pybind11/pybind11.h>
 #ifdef USE_NUMPY
 #include <pybind11/numpy.h>
@@ -50,8 +50,7 @@ namespace py = pybind11;
 // exchange gil.h with py::gil_scoped_release and py::gil_scoped_acquire
 // https://pybind11.readthedocs.io/en/stable/advanced/misc.html#global-interpreter-lock-gil
 
-class VideoFrameNumPyWrapper : public gg::VideoFrame
-{
+class VideoFrameNumPyWrapper : public gg::VideoFrame {
 protected:
     //!
     //! \brief Wrapped \c VideoFrame object
@@ -76,8 +75,7 @@ public:
     //!
     VideoFrameNumPyWrapper(gg::VideoFrame * frame)
         : _frame(frame)
-        , _manage_frame(false)
-    {
+        , _manage_frame(false) {
         _manage_data = false;
         sync_specs();
     }
@@ -90,8 +88,7 @@ public:
     //!
     VideoFrameNumPyWrapper(const gg::VideoFrame & rhs)
         : _frame(new gg::VideoFrame(rhs))
-        , _manage_frame(true)
-    {
+        , _manage_frame(true) {
         _manage_data = false;
         sync_specs();
     }
@@ -107,8 +104,7 @@ public:
     VideoFrameNumPyWrapper(enum gg::ColourSpace colour,
                            size_t cols, size_t rows)
         : _frame(new gg::VideoFrame(colour, cols, rows))
-        , _manage_frame(true)
-    {
+        , _manage_frame(true) {
         _manage_data = false;
         sync_specs();
     }
@@ -126,8 +122,7 @@ public:
                            size_t stereo_count)
         : _frame(new gg::VideoFrame(colour, cols, rows,
                                     stereo_count))
-        , _manage_frame(true)
-    {
+        , _manage_frame(true) {
         _manage_data = false;
         sync_specs();
     }
@@ -142,14 +137,12 @@ public:
     VideoFrameNumPyWrapper(enum gg::ColourSpace colour,
                            bool manage_data)
         : _frame(new gg::VideoFrame(colour, manage_data))
-        , _manage_frame(true)
-    {
+        , _manage_frame(true) {
         _manage_data = false;
         sync_specs();
     }
 
-    ~VideoFrameNumPyWrapper()
-    {
+    ~VideoFrameNumPyWrapper() {
         if (_manage_frame)
             delete _frame;
     }
@@ -168,13 +161,10 @@ public:
     //! structured ndarray exposure)
     //! \throw std::out_of_range if stereo index invalid
     //!
-    py::array_t<uint8_t> stereo_data_as_ndarray(
-        bool structured, size_t stereo_index) const
-    {
+    py::array_t<uint8_t> stereo_data_as_ndarray(bool structured, size_t stereo_index) const {
         py::array::ShapeContainer shape;
         py::array::StridesContainer strides;
-        if (structured)
-        {
+        if (structured) {
             switch(colour())
             {
             case gg::BGRA:
@@ -192,8 +182,7 @@ public:
                 break;
             }
         }
-        else
-        {
+        else {
             shape = py::array::ShapeContainer({_frame->data_length(stereo_index)});
             strides = py::array::ShapeContainer({sizeof(uint8_t)});
         }
@@ -208,8 +197,7 @@ public:
 #endif
 
 protected:
-    void sync_specs()
-    {
+    void sync_specs() {
         _colour = _frame->colour();
         _cols = _frame->cols();
         _rows = _frame->rows();
@@ -219,6 +207,87 @@ protected:
     }
 };
 
+// previously IObservableWrapper, trampolines, not meant for construction
+// https://pybind11.readthedocs.io/en/stable/advanced/classes.html
+class PyIObservable : public gg::IObservable {
+    public:
+        // Trampolines
+        void attach(gg::IObserver& observer) override {
+            PYBIND11_OVERRIDE(
+                void,
+                gg::IObservable,
+                attach,
+                observer
+            );
+        }
+
+        void detach(gg::IObserver& observer) override {
+            PYBIND11_OVERRIDE(
+                void,
+                gg::IObservable,
+                detach,
+                observer
+            );
+        }
+};
+
+// previously IObserverWrapper, trampolines, not meant for construction
+// https://pybind11.readthedocs.io/en/stable/advanced/classes.html
+class PyIObserver : public gg::IObserver {
+    public:
+        // Trampolines
+        void update(gg::VideoFrame& frame) override {
+            py::gil_scoped_acquire acquire;
+            VideoFrameNumPyWrapper wrapped_frame(&frame);
+
+            PYBIND11_OVERRIDE_PURE(
+                void,
+                gg::IObserver,
+                update,
+                wrapped_frame
+            );
+        }
+};
+
+// previously IObservableObserverWrapper
+// https://pybind11.readthedocs.io/en/stable/advanced/classes.html
+class PyIObservableObserver : public PyIObservable, public PyIObserver {
+    public:
+        PyIObservableObserver() = default;
+        ~PyIObservableObserver() = default;
+
+        // Trampolines
+        void attach(gg::IObserver& observer) override {
+            PYBIND11_OVERRIDE(
+                void,
+                PyIObservable,
+                attach,
+                observer
+            );
+        }
+
+        void detach(gg::IObserver& observer) override {
+            PYBIND11_OVERRIDE(
+                void,
+                PyIObservable,
+                detach,
+                observer
+            );
+        }
+
+        void update(gg::VideoFrame& frame) override {
+            py::gil_scoped_acquire acquire;
+            VideoFrameNumPyWrapper wrapped_frame(&frame);
+
+            PYBIND11_OVERRIDE_PURE(
+                void,
+                PyIObserver,
+                update,
+                wrapped_frame
+            );
+            notify(frame);
+        }
+};
 
 PYBIND11_MODULE(pygiftgrab, m) {
     // exceptions // NOTE helper functions default to what(), default already translated translated by pybind
@@ -268,6 +337,100 @@ PYBIND11_MODULE(pygiftgrab, m) {
 #endif
         ;
 
-    // py::class_<>
+    py::class_<gg::IObservable, PyIObservable>(m, "IObservable")
+        .def("attach", &gg::IObservable::attach)
+        .def("detach", &gg::IObservable::detach);
+
+    py::class_<gg::IObserver, PyIObserver>(m, "IObserver")
+        .def("update", &gg::IObserver::update);
+
+    py::class_<PyIObservableObserver, PyIObservable, PyIObserver>(m, "IObservableObserver", py::multiple_inheritance())
+        .def(py::init<>())
+        .def("attach", &gg::IObservable::attach)
+        .def("detach", &gg::IObservable::detach)
+        .def("update", &gg::IObserver::update);
+
+    // left out wrapper for gg:IVideoTarget here, what is the use case of it?
+
+    py::class_<gg::VideoSourceFactory>(m, "VideoSourceFactory")
+        .def("get_device", &gg::VideoSourceFactory::get_device, py::return_value_policy::reference)
+        .def("free_device", &gg::VideoSourceFactory::free_device)
+        .def("connect_network_source", &gg::VideoSourceFactory::connect_network_source, py::return_value_policy::take_ownership)
+        .def_static("get_instance", &gg::VideoSourceFactory::get_instance, py::return_value_policy::reference)
+        .def("create_file_reader", &gg::VideoSourceFactory::create_file_reader, py::return_value_policy::take_ownership);
+
+    py::class_<gg::VideoTargetFactory>(m, "VideoTargetFactory")
+        .def("create_file_writer", &gg::VideoTargetFactory::create_file_writer, py::return_value_policy::take_ownership)
+        .def_static("get_instance", &gg::VideoTargetFactory::get_instance, py::return_value_policy::reference);
+
+// NOTE: these should be extending the core rather than being appended here
+#ifdef USE_OPENCV
+    // NOTE: why not using appropriate namespace?
+    py::class_<VideoSourceOpenCV, IVideoSource, PyIObservable>(m, "VideoSourceOpenCV")
+        .def(py::init<>())
+        .def(py::init<char*>())
+        .def("get_frame", &VideoSourceOpenCV::get_frame)
+        .def("get_frame_dimensions", &VideoSourceOpenCV::get_frame_dimensions)
+        .def("get_frame_rate", &VideoSourceOpenCV::get_frame_rate)
+        .def("set_sub_frame", &VideoSourceOpenCV::set_sub_frame)
+        .def("get_full_frame", &VideoSourceOpenCV::get_full_frame)
+        .def("attach", &gg::IObservable::attach)
+        .def("detach", &gg::IObservable::detach);
+
+    py::class_<gg::VideoTargetOpenCV, gg::VideoTarget>(m, VideoTargetOpenCV)
+        .def(py::init<std::string, std::string, float>())
+        .def("append", &gg::VideoTargetOpenCV::append);
+#endif
+
+#ifdef USE_EPIPHANSDK
+    py::class_<gg::VideoSourceEpiphanSDK, IVideoSource, PyIObservable>(m, "VideoSourceEpiphaSDK")
+        .def(py::init<const std::string, const V2U_INT32>())
+        .def("get_frame", &gg::VideoSourceEpiphanSDK::get_frame)
+        .def("get_frame_dimensions", &gg::VideoSourceEpiphanSDK::get_frame_dimensions)
+        .def("get_frame_rate", &gg::VideoSourceEpiphanSDK::get_frame_rate)
+        .def("set_sub_frame", &gg::VideoSourceEpiphanSDK::set_sub_frame)
+        .def("get_full_frame", &gg::VideoSourceEpiphanSDK::get_full_frame)
+        .def("attach", &gg::IObservable::attach)
+        .def("detach", &gg::IObservable::detach);
+#endif
+
+#ifdef USE_LIBVLC
+    py::class_<gg::VIdeoSOurceVLC, IVideoSource, PyIObservable>(m, "VideoSourceVLC")
+        .def(py::init<const std::string>())
+        .def("get_frame", &gg::VideoSourceVLC::get_frame)
+        .def("get_frame_dimensions", &gg::VideoSourceVLC::get_frame_dimensions)
+        .def("get_frame_rate", &gg::VideoSourceVLC::get_frame_rate)
+        .def("set_sub_frame", &gg::VideoSourceVLC::set_sub_frame)
+        .def("get_full_frame", &gg::VideoSourceVLC::get_full_frame)
+        .def("attach", &gg::IObservable::attach)
+        .def("detach", &gg::IObservable::detach);
+#endif
+
+#ifdef USE_BLACKMAGICSDK
+    py::class_<gg::VideoSourceBlackmagicSDK, IVideoSource, PyIObservable>(m, "VideoSOurceBlackmagicSDK")
+        .def(py::init<size_t, gg::CoulourSpace>())
+        .def("get_frame", &gg::VideoSourceBlackmagicSDK::get_frame)
+        .def("get_frame_dimensions", &gg::VideoSourceBlackmagicSDK::get_frame_dimensions)
+        .def("get_frame_rate", &gg::VideoSourceBlackmagicSDK::get_frame_rate)
+        .def("set_sub_frame", &gg::VideoSourceBlackmagicSDK::set_sub_frame)
+        .def("get_full_frame", &gg::VideoSourceBlackmagicSDK::get_full_frame)
+        .def("attach", &gg::IObservable::attach)
+        .def("detach", &gg::IObservable::detach);
+#endif
+
+#ifdef USE_FFMPEG
+    py::class_<gg::VideoSOurceFFmpgeg, IVideoSource, PyIObservable>(m, "VideoSourceFFmpgeg")
+        .def(py::init<std::string, gg::ColourSpace, bool>())
+        .def("get_frame", &gg::VideoSourceFFmpeg::get_frame)
+        .def("get_frame_dimensions", &gg::VideoSourceFFmpeg::get_frame_dimensions)
+        .def("get_frame_rate", &gg::VideoSourceFFmpeg::get_frame_rate)
+        .def("set_sub_frame", &gg::VideoSourceFFmpeg::set_sub_frame)
+        .def("get_full_frame", &gg::VideoSourceFFmpeg::get_full_frame)
+        .def("attach", &gg::IObservable::attach)
+        .def("detach", &gg::IObservable::detach);
     
+    py::class_<gg::VideoTargetFFmpeg, gg::IVideoTarget>(m, "VideoTargetFFmpeg")
+        .def(py::init<std::string, std::string, float>())
+        .def("append", &gg::VideoTargetFFmpeg::append);
+#endif
 }
