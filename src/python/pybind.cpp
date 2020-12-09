@@ -264,7 +264,7 @@ PYBIND11_MODULE(pygiftgrab, m) {
         .def_static("required_data_length", &VideoFrameNumPyWrapper::required_data_length)
         .def_static("required_pixel_length", &VideoFrameNumPyWrapper::required_pixel_length)
 #ifdef USE_NUMPY
-        .def("data", &VideoFrameNumPyWrapper::stereo_data_as_ndarray, py::arg("structured") = true, py::arg("stereo_index") = 0, py::return_value_policy::move)
+        .def("data", &VideoFrameNumPyWrapper::stereo_data_as_ndarray, py::arg("structured") = false, py::arg("stereo_index") = 0, py::return_value_policy::move)
 #endif
         ;
 

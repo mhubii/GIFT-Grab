@@ -25,7 +25,7 @@ def peri_test(colour_space):
 @mark.numpy_compatibility
 def test_data():
     global frame, cols, rows
-    data_np = frame.data(structured=False) # should use unstructured/flat array here
+    data_np = frame.data()
     assert data_np.dtype == np.uint8
     assert frame.data_length() == data_np.size
 
@@ -41,7 +41,7 @@ def test_stereo_data():
 @mark.numpy_compatibility
 def test_data_length():
     global frame, cols, rows
-    data_np = frame.data(structured=False) # should use unstructured/flat array here
+    data_np = frame.data()
     data_len = frame.data_length()
 
     with raises(IndexError) as e:
@@ -80,7 +80,7 @@ def test_invalid_stereo_data_index_raises():
 def test_read_access(colour_space):
     global frame
     global cols, rows
-    data_np = frame.data(structured=False) # should use unstructured/flat array here
+    data_np = frame.data()
 
     # general indices sampled at the boundaries only
     # intermediate indices should be accessible,
@@ -117,8 +117,8 @@ def test_read_access(colour_space):
 def test_write_access():
     global frame
     global cols, rows
-    data_np = frame.data(structured=False) # should use unstructured/flat array here
-    data_np_ = frame.data(structured=False)  # shadow pointer
+    data_np = frame.data()
+    data_np_ = frame.data()  # shadow pointer
     data_len = frame.data_length()
     for i in [0, data_len // 4, data_len // 2, 3 * data_len // 4]:
         rolled_value = roll_uint8(data_np[i])
