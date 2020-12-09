@@ -1,6 +1,6 @@
 #include "vlc_video_source.h"
 #ifdef BUILD_PYTHON
-#include "gil.h"
+#include <pybind11/pybind11.h>
 #endif
 #include <cstdio>
 #include <cstdlib>
@@ -204,7 +204,7 @@ void VideoSourceVLC::run_vlc()
     libvlc_media_release(vlc_media);
 
 #ifdef BUILD_PYTHON
-    ScopedPythonGILRelease gil_release;
+    pybind11::gil_scoped_release gil_release;
 #endif
 
     { // artificial scope for the mutex guard below

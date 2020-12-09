@@ -1,6 +1,6 @@
 #include "broadcastdaemon.h"
 #ifdef BUILD_PYTHON
-#include "gil.h"
+#include <pybind11/pybind11.h>
 #endif
 #include <chrono>
 
@@ -36,7 +36,7 @@ void BroadcastDaemon::start(float frame_rate)
     }
 
 #ifdef BUILD_PYTHON
-    ScopedPythonGILRelease gil_release;
+    pybind11::gil_scoped_release gil_release;
 #endif
 
     _thread = std::thread(&BroadcastDaemon::run,

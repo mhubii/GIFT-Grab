@@ -1,7 +1,7 @@
 #include "iobservable.h"
 #include <algorithm>
 #ifdef BUILD_PYTHON
-#include "gil.h"
+#include <pybind11/pybind11.h>
 #endif
 
 
@@ -27,7 +27,7 @@ void IObservable::attach(IObserver & observer)
 void IObservable::detach(IObserver & observer)
 {
 #ifdef BUILD_PYTHON
-    ScopedPythonGILRelease gil_release;
+    pybind11::gil_scoped_release gil_release;
 #endif
     std::lock_guard<std::mutex> lock_guard(_observers_lock);
     _observers.erase(
