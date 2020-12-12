@@ -403,6 +403,7 @@ PYBIND11_MODULE(pygiftgrab, m) {
         ;
 
     py::class_<gg::IObservable, PyIObservable>(m, "IObservable")
+        .def(py::init<>())
         .def("attach", &gg::IObservable::attach)
         .def("detach", &gg::IObservable::detach);
 
@@ -414,6 +415,7 @@ PYBIND11_MODULE(pygiftgrab, m) {
         .def("get_full_frame", &IVideoSource::get_full_frame);
 
     py::class_<gg::IObserver, PyIObserver>(m, "IObserver")
+        .def(py::init<>())
         .def("update", &gg::IObserver::update);
 
     py::class_<gg::IVideoTarget, PyIVideoTarget, gg::IObserver>(m, "IVideoTarget")
