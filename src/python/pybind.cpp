@@ -231,6 +231,55 @@ class PyIObservable : public gg::IObservable {
         }
 };
 
+// previously IVideoSourceWrapper, trampolines, not meant for construction
+// https://pybind11.readthedocs.io/en/stable/advanced/classes.html
+class PyIVideoSource : public IVideoSource {
+    public:
+        // Trampolines
+        bool get_frame_dimensions(int& width, int& height) override {
+            PYBIND11_OVERRIDE_PURE(
+                bool,
+                IVideoSource,
+                get_frame_dimensions,
+                width, height
+            ); 
+        }
+
+        bool get_frame(gg::VideoFrame& frame) override {
+            PYBIND11_OVERRIDE_PURE(
+                bool,
+                IVideoSource,
+                get_frame,
+                frame
+            );
+        }
+
+        double get_frame_rate() override {
+            PYBIND11_OVERRIDE_PURE(
+                double,
+                IVideoSource,
+                get_frame_rate
+            );
+        }
+
+        void set_sub_frame(int x, int y, int width, int height) override {
+            PYBIND11_OVERRIDE_PURE(
+                void,
+                IVideoSource,
+                set_sub_frame,
+                x, y, width, height
+            );
+        }
+
+        void get_full_frame() override {
+            PYBIND11_OVERRIDE(
+                void,
+                IVideoSource,
+                get_full_frame
+            );
+        }
+};
+
 // previously IObserverWrapper, trampolines, not meant for construction
 // https://pybind11.readthedocs.io/en/stable/advanced/classes.html
 class PyIObserver : public gg::IObserver {
@@ -341,6 +390,13 @@ PYBIND11_MODULE(pygiftgrab, m) {
         .def("attach", &gg::IObservable::attach)
         .def("detach", &gg::IObservable::detach);
 
+    py::class_<IVideoSource, PyIVideoSource>(m, "IVideoSource")
+        .def("get_frame_dimension", &IVideoSource::get_frame_dimensions)
+        .def("get_frame", &IVideoSource::get_frame)
+        .def("get_frame_rate", &IVideoSource::get_frame_rate)
+        .def("set_sub_frame", &IVideoSource::set_sub_frame)
+        .def("get_full_frame", &IVideoSource::get_full_frame);
+
     py::class_<gg::IObserver, PyIObserver>(m, "IObserver")
         .def("update", &gg::IObserver::update);
 
@@ -366,7 +422,7 @@ PYBIND11_MODULE(pygiftgrab, m) {
 // NOTE: these should be extending the core rather than being appended here
 #ifdef USE_OPENCV
     // NOTE: why not using appropriate namespace?
-    py::class_<VideoSourceOpenCV, IVideoSource, PyIObservable>(m, "VideoSourceOpenCV")
+    py::class_<VideoSourceOpenCV, IVideoSource, gg::IObservable>(m, "VideoSourceOpenCV")
         .def(py::init<>())
         .def(py::init<char*>())
         .def("get_frame", &VideoSourceOpenCV::get_frame)
@@ -383,7 +439,7 @@ PYBIND11_MODULE(pygiftgrab, m) {
 #endif
 
 #ifdef USE_EPIPHANSDK
-    py::class_<gg::VideoSourceEpiphanSDK, IVideoSource, PyIObservable>(m, "VideoSourceEpiphaSDK")
+    py::class_<gg::VideoSourceEpiphanSDK, IVideoSource, gg::IObservable>(m, "VideoSourceEpiphaSDK")
         .def(py::init<const std::string, const V2U_INT32>())
         .def("get_frame", &gg::VideoSourceEpiphanSDK::get_frame)
         .def("get_frame_dimensions", &gg::VideoSourceEpiphanSDK::get_frame_dimensions)
@@ -395,7 +451,7 @@ PYBIND11_MODULE(pygiftgrab, m) {
 #endif
 
 #ifdef USE_LIBVLC
-    py::class_<gg::VIdeoSOurceVLC, IVideoSource, PyIObservable>(m, "VideoSourceVLC")
+    py::class_<gg::VIdeoSOurceVLC, IVideoSource, gg::IObservable>(m, "VideoSourceVLC")
         .def(py::init<const std::string>())
         .def("get_frame", &gg::VideoSourceVLC::get_frame)
         .def("get_frame_dimensions", &gg::VideoSourceVLC::get_frame_dimensions)
@@ -407,8 +463,8 @@ PYBIND11_MODULE(pygiftgrab, m) {
 #endif
 
 #ifdef USE_BLACKMAGICSDK
-    py::class_<gg::VideoSourceBlackmagicSDK, IVideoSource, PyIObservable>(m, "VideoSOurceBlackmagicSDK")
-        .def(py::init<size_t, gg::CoulourSpace>())
+    py::class_<gg::VideoSourceBlackmagicSDK, IVideoSource, gg::IObservable>(m, "VideoSOurceBlackmagicSDK")
+        .def(py::init<size_t, gg::ColourSpace>())
         .def("get_frame", &gg::VideoSourceBlackmagicSDK::get_frame)
         .def("get_frame_dimensions", &gg::VideoSourceBlackmagicSDK::get_frame_dimensions)
         .def("get_frame_rate", &gg::VideoSourceBlackmagicSDK::get_frame_rate)
@@ -419,7 +475,7 @@ PYBIND11_MODULE(pygiftgrab, m) {
 #endif
 
 #ifdef USE_FFMPEG
-    py::class_<gg::VideoSOurceFFmpgeg, IVideoSource, PyIObservable>(m, "VideoSourceFFmpgeg")
+    py::class_<gg::VideoSourceFFmpeg, IVideoSource, gg::IObservable>(m, "VideoSourceFFmpgeg")
         .def(py::init<std::string, gg::ColourSpace, bool>())
         .def("get_frame", &gg::VideoSourceFFmpeg::get_frame)
         .def("get_frame_dimensions", &gg::VideoSourceFFmpeg::get_frame_dimensions)
