@@ -298,6 +298,22 @@ class PyIObserver : public gg::IObserver {
         }
 };
 
+// previously IVideoTargetWrapper
+// https://pybind11.readthedocs.io/en/stable/advanced/classes.html
+class PyIVideoTarget : public gg::IVideoTarget
+{
+public:
+    // Trampolines
+    void append(const gg::VideoFrame& frame) override {
+        PYBIND11_OVERRIDE_PURE(
+            void,
+            gg::IVideoTarget,
+            append,
+            frame
+        );
+    }
+};
+
 // previously IObservableObserverWrapper
 // https://pybind11.readthedocs.io/en/stable/advanced/classes.html
 class PyIObservableObserver : public PyIObservable, public PyIObserver {
@@ -390,7 +406,7 @@ PYBIND11_MODULE(pygiftgrab, m) {
         .def("attach", &gg::IObservable::attach)
         .def("detach", &gg::IObservable::detach);
 
-    py::class_<IVideoSource, PyIVideoSource>(m, "IVideoSource")
+    py::class_<IVideoSource, PyIVideoSource, gg::IObservable>(m, "IVideoSource")
         .def("get_frame_dimension", &IVideoSource::get_frame_dimensions)
         .def("get_frame", &IVideoSource::get_frame)
         .def("get_frame_rate", &IVideoSource::get_frame_rate)
@@ -400,13 +416,14 @@ PYBIND11_MODULE(pygiftgrab, m) {
     py::class_<gg::IObserver, PyIObserver>(m, "IObserver")
         .def("update", &gg::IObserver::update);
 
+    py::class_<gg::IVideoTarget, PyIVideoTarget, gg::IObserver>(m, "IVideoTarget")
+        .def("append", &gg::IVideoTarget::append);
+
     py::class_<PyIObservableObserver, PyIObservable, PyIObserver>(m, "IObservableObserver", py::multiple_inheritance())
         .def(py::init<>())
         .def("attach", &gg::IObservable::attach)
         .def("detach", &gg::IObservable::detach)
         .def("update", &gg::IObserver::update);
-
-    // left out wrapper for gg:IVideoTarget here, what is the use case of it?
 
     py::class_<gg::VideoSourceFactory>(m, "VideoSourceFactory")
         .def("get_device", &gg::VideoSourceFactory::get_device, py::return_value_policy::reference)
