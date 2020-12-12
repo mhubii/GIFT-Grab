@@ -352,7 +352,7 @@ bool VideoSourceFFmpeg::ffmpeg_reset_pipeline(
              _avformat_context->streams[_avstream_idx]->time_base.den,
              _avformat_context->streams[_avstream_idx]->codec->sample_aspect_ratio.num,
              _avformat_context->streams[_avstream_idx]->codec->sample_aspect_ratio.den);
-    AVFilter * begin_filter  = avfilter_get_by_name("buffer");
+    const AVFilter * begin_filter  = avfilter_get_by_name("buffer");
     ret = avfilter_graph_create_filter(&pipeline_begin, begin_filter, "in",
                                        pipeline_desc, nullptr, pipeline);
     if (ret < 0)
@@ -365,7 +365,7 @@ bool VideoSourceFFmpeg::ffmpeg_reset_pipeline(
     }
 
     // initialise pipeline end
-    AVFilter * end_filter = avfilter_get_by_name("buffersink");
+    const AVFilter * end_filter = avfilter_get_by_name("buffersink");
     ret = avfilter_graph_create_filter(&pipeline_end, end_filter, "out",
                                        nullptr, nullptr, pipeline);
     if (ret < 0)
